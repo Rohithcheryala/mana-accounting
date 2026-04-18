@@ -3,6 +3,10 @@ main = ".svelte-kit/cloudflare/_worker.js"
 compatibility_date = "2025-12-01"
 compatibility_flags = ["nodejs_compat"]
 
+routes = [
+  { pattern = "mana-accounting.rohithcheryala.dev", custom_domain = true }
+]
+
 [assets]
 directory = ".svelte-kit/cloudflare"
 binding = "ASSETS"
