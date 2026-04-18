@@ -6,6 +6,9 @@
 
   const today = new Date().toISOString().slice(0, 10);
 
+  type Cat = { id: number; name: string; kind: 'expense' | 'income'; usage?: number };
+  const DEFAULT_CAT_COUNT = 6;
+
   let kind = $state<'expense' | 'income' | 'settlement'>('expense');
   let amount = $state<string>('');
   let occurredOn = $state<string>(today);
@@ -17,13 +20,79 @@
   let settleTo = $state<number | ''>(data.partners[1]?.id ?? '');
   let bookingId = $state<number | ''>(data.preselectBookingId ?? '');
 
+  let categories = $state<Cat[]>([...(data.categories as Cat[])]);
+  let catSearch = $state<string>('');
+  let creatingCat = $state<boolean>(false);
+  let catError = $state<string>('');
+  let showAllCats = $state<boolean>(false);
+
   let shares = $state<Record<number, string>>(
     Object.fromEntries(data.partners.map((p) => [p.id, '']))
   );
 
-  const filteredCategories = $derived(
-    kind === 'settlement' ? [] : data.categories.filter((c) => c.kind === kind)
+  const kindCategories = $derived(
+    kind === 'settlement' ? [] : categories.filter((c) => c.kind === kind)
   );
+
+  const kindCategoriesByUsage = $derived(
+    [...kindCategories].sort(
+      (a, b) => (b.usage ?? 0) - (a.usage ?? 0) || a.name.localeCompare(b.name)
+    )
+  );
+
+  const filteredCategories = $derived.by(() => {
+    const q = catSearch.trim().toLowerCase();
+    if (q) return kindCategories.filter((c) => c.name.toLowerCase().includes(q));
+    if (showAllCats) return kindCategoriesByUsage;
+    return [] as Cat[];
+  });
+
+  const selectedCategory = $derived(
+    kindCategories.find((c) => c.id === categoryId) ?? null
+  );
+
+  const hasExactMatch = $derived(
+    kindCategories.some((c) => c.name.toLowerCase() === catSearch.trim().toLowerCase())
+  );
+
+  const canCreate = $derived(
+    kind !== 'settlement' && catSearch.trim().length > 0 && !hasExactMatch && !creatingCat
+  );
+
+  async function createCategory() {
+    const name = catSearch.trim();
+    if (!name || kind === 'settlement' || creatingCat) return;
+    creatingCat = true;
+    catError = '';
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, kind })
+      });
+      if (!res.ok) {
+        catError = (await res.text()) || `Failed (${res.status})`;
+        return;
+      }
+      const created = (await res.json()) as Cat;
+      if (!categories.find((c) => c.id === created.id)) {
+        categories = [...categories, created];
+      }
+      categoryId = created.id;
+      catSearch = '';
+    } catch (e) {
+      catError = (e as Error).message;
+    } finally {
+      creatingCat = false;
+    }
+  }
+
+  function onCatSearchKey(e: KeyboardEvent) {
+    if (e.key === 'Enter' && canCreate) {
+      e.preventDefault();
+      createCategory();
+    }
+  }
 
   let sharesTouched = $state(false);
   $effect(() => {
@@ -119,19 +188,72 @@
 
       <!-- Category -->
       <div>
-        <span class="label">Category</span>
-        <div class="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Category">
-          <label class="relative">
-            <input type="radio" name="category_id" value="" bind:group={categoryId} class="peer sr-only" />
-            <span class="cat-chip">—</span>
-          </label>
-          {#each filteredCategories as c}
-            <label class="relative">
-              <input type="radio" name="category_id" value={c.id} bind:group={categoryId} class="peer sr-only" />
-              <span class="cat-chip">{c.name}</span>
-            </label>
-          {/each}
+        <input type="hidden" name="category_id" value={categoryId} />
+        <div class="mb-1.5 flex items-center justify-between">
+          <span class="label mb-0">Category</span>
+          {#if kindCategories.length > 0 && !catSearch}
+            <button
+              type="button"
+              onclick={() => (showAllCats = !showAllCats)}
+              class="text-[11px] font-medium text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
+            >
+              {showAllCats ? 'hide all' : `show all (${kindCategories.length})`}
+            </button>
+          {/if}
         </div>
+
+        {#if selectedCategory}
+          <div class="mb-2 inline-flex items-center gap-1.5 rounded-full border border-slate-900 bg-slate-900 py-1 pl-3 pr-1 text-sm font-medium text-white">
+            <span>{selectedCategory.name}</span>
+            <button
+              type="button"
+              onclick={() => (categoryId = '')}
+              aria-label="Clear category"
+              class="flex h-5 w-5 items-center justify-center rounded-full text-white/70 hover:bg-white/20 hover:text-white"
+            >
+              <svg viewBox="0 0 24 24" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+        {/if}
+
+        <input
+          type="text"
+          bind:value={catSearch}
+          onkeydown={onCatSearchKey}
+          placeholder="Search or type a new category…"
+          class="input"
+          autocomplete="off"
+        />
+
+        {#if filteredCategories.length > 0 || canCreate || (catSearch && !canCreate)}
+          <div class="mt-2 flex flex-wrap gap-1.5" aria-label="Category options">
+            {#each filteredCategories as c}
+              <button
+                type="button"
+                onclick={() => { categoryId = c.id; catSearch = ''; showAllCats = false; }}
+                class="cat-chip {categoryId === c.id ? 'border-slate-900 bg-slate-900 text-white' : ''}"
+              >
+                {c.name}
+              </button>
+            {/each}
+            {#if canCreate}
+              <button
+                type="button"
+                onclick={createCategory}
+                class="cat-chip border-dashed border-emerald-400 bg-emerald-50 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-100"
+              >
+                {creatingCat ? 'creating…' : `+ Create "${catSearch.trim()}"`}
+              </button>
+            {/if}
+            {#if catSearch && filteredCategories.length === 0 && !canCreate}
+              <span class="text-[12px] text-slate-400">No matches.</span>
+            {/if}
+          </div>
+        {/if}
+
+        {#if catError}
+          <p class="mt-1 text-[11px] text-rose-600">{catError}</p>
+        {/if}
       </div>
     {:else}
       <div class="grid grid-cols-2 gap-3">

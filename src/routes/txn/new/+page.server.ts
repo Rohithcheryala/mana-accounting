@@ -36,7 +36,7 @@ async function attachReceipts(
 
 export const load: PageServerLoad = async ({ locals, url }) => {
   const preselectBookingId = url.searchParams.get('booking_id');
-  const [partnersRes, categoriesRes, bookingsRes] = await Promise.all([
+  const [partnersRes, categoriesRes, bookingsRes, usageRes] = await Promise.all([
     locals.supabase.from('partner').select('id, name').order('id'),
     locals.supabase.from('category').select('id, name, kind').order('name'),
     locals.supabase
@@ -44,8 +44,25 @@ export const load: PageServerLoad = async ({ locals, url }) => {
       .select('id, start_at, end_at, status, customer:customer_id(name)')
       .in('status', ['reserved', 'active', 'closed'])
       .order('start_at', { ascending: false })
-      .limit(50)
+      .limit(50),
+    locals.supabase
+      .from('txn')
+      .select('category_id')
+      .not('category_id', 'is', null)
+      .is('voided_at', null)
+      .limit(2000)
   ]);
+
+  const usageCount = new Map<number, number>();
+  for (const row of (usageRes.data ?? []) as Array<{ category_id: number | null }>) {
+    if (row.category_id != null) {
+      usageCount.set(row.category_id, (usageCount.get(row.category_id) ?? 0) + 1);
+    }
+  }
+  const categories = (categoriesRes.data ?? []).map((c) => ({
+    ...c,
+    usage: usageCount.get(c.id) ?? 0
+  }));
   type BookingOption = {
     id: number;
     start_at: string;
@@ -72,7 +89,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
   return {
     partners: partnersRes.data ?? [],
-    categories: categoriesRes.data ?? [],
+    categories,
     bookings,
     preselectBookingId: preselectBookingId ? Number(preselectBookingId) : null
   };
