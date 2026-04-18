@@ -11,6 +11,11 @@
       icon: 'M3 10.5 12 3l9 7.5M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5'
     },
     {
+      href: '/bookings',
+      label: 'Bookings',
+      icon: 'M7 3v4M17 3v4M3 9h18M5 7h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z'
+    },
+    {
       href: '/txn/new',
       label: 'New',
       icon: 'M12 5v14M5 12h14'
@@ -19,6 +24,11 @@
       href: '/txn',
       label: 'Ledger',
       icon: 'M5 4h14M5 9h14M5 14h9M5 19h14'
+    },
+    {
+      href: '/review',
+      label: 'Review',
+      icon: 'M3 20h18M5 20V10M10 20V6M15 20v-8M20 20V4'
     }
   ];
 
@@ -38,6 +48,12 @@
         <span class="text-sm font-medium text-slate-500 group-hover:text-slate-900">accounting</span>
       </a>
       <div class="flex items-center gap-1">
+        <a
+          href="/customers"
+          class="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+        >
+          customers
+        </a>
         <a
           href="/team"
           class="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-900"
@@ -62,7 +78,7 @@
     style="padding-bottom: env(safe-area-inset-bottom);"
     aria-label="Primary"
   >
-    <div class="mx-auto grid max-w-3xl grid-cols-3">
+    <div class="mx-auto grid max-w-3xl grid-cols-5">
       {#each nav as item}
         {@const isActive = active(item.href)}
         <a

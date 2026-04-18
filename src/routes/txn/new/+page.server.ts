@@ -2,14 +2,47 @@ import { fail, redirect } from '@sveltejs/kit';
 import { rupeesToPaise, equalSplit } from '$lib/money';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
-  const [partnersRes, categoriesRes] = await Promise.all([
+export const load: PageServerLoad = async ({ locals, url }) => {
+  const preselectBookingId = url.searchParams.get('booking_id');
+  const [partnersRes, categoriesRes, bookingsRes] = await Promise.all([
     locals.supabase.from('partner').select('id, name').order('id'),
-    locals.supabase.from('category').select('id, name, kind').order('name')
+    locals.supabase.from('category').select('id, name, kind').order('name'),
+    locals.supabase
+      .from('booking')
+      .select('id, start_at, end_at, status, customer:customer_id(name)')
+      .in('status', ['reserved', 'active', 'closed'])
+      .order('start_at', { ascending: false })
+      .limit(50)
   ]);
+  type BookingOption = {
+    id: number;
+    start_at: string;
+    end_at: string;
+    status: string;
+    customer: { name: string } | null;
+  };
+
+  const rawBookings = (bookingsRes.data ?? []) as Array<{
+    id: number;
+    start_at: string;
+    end_at: string;
+    status: string;
+    customer: { name: string } | { name: string }[] | null;
+  }>;
+
+  const bookings: BookingOption[] = rawBookings.map((b) => ({
+    id: b.id,
+    start_at: b.start_at,
+    end_at: b.end_at,
+    status: b.status,
+    customer: Array.isArray(b.customer) ? (b.customer[0] ?? null) : b.customer
+  }));
+
   return {
     partners: partnersRes.data ?? [],
-    categories: categoriesRes.data ?? []
+    categories: categoriesRes.data ?? [],
+    bookings,
+    preselectBookingId: preselectBookingId ? Number(preselectBookingId) : null
   };
 };
 

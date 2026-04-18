@@ -42,3 +42,43 @@ export interface TxnWithShares extends Txn {
   category?: Category | null;
   counterparty_partner?: Partner | null;
 }
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string | null;
+  kyc_note: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export type BookingStatus = 'reserved' | 'active' | 'closed' | 'cancelled';
+
+export interface Booking {
+  id: number;
+  customer_id: number | null;
+  start_at: string;
+  end_at: string;
+  quoted_rate_paise: number;
+  quoted_total_paise: number;
+  deposit_held_paise: number;
+  deposit_refunded_paise: number;
+  deposit_retained_paise: number;
+  odo_out_km: number | null;
+  odo_in_km: number | null;
+  fuel_out_pct: number | null;
+  fuel_in_pct: number | null;
+  platform: string;
+  platform_fee_pct: number;
+  status: BookingStatus;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface TxnReceipt {
+  id: number;
+  txn_id: number;
+  storage_path: string;
+  mime_type: string | null;
+  uploaded_at: string;
+}

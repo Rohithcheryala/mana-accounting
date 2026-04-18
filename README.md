@@ -15,7 +15,7 @@ Ledger app for a self-drive car rental run by three equal partners. Invite-only;
 1. Go to [supabase.com](https://supabase.com) → New project.
 2. Pick a strong DB password and the nearest region.
 3. Once provisioned, open **SQL Editor**.
-4. Paste and run `db/schema.sql`, then `db/seed.sql`.
+4. Paste and run `db/schema.sql`, then `db/seed.sql`, then `db/storage.sql` (creates the `receipts` bucket + RLS).
 5. In **Authentication → Providers → Email**, **disable "Allow new users to sign up"**. Access is invite-only.
 6. In **Authentication → Users**, invite yourself as the first partner. Click the email link and set a password at `/set-password`.
 7. Additional partners are invited from the app itself at `/team`. Any signed-in partner can invite — all three are peers.
@@ -89,9 +89,19 @@ The two `PUBLIC_*` vars must be in your local `.env` at build time (they're inli
 ## Phase status
 
 - [x] **Phase 1** — foundation, schema, auth, transaction entry/list/detail, dashboard.
-- [ ] **Phase 2** — bookings + customers.
-- [ ] **Phase 3** — receipt upload, monthly review dashboard, CSV/PDF export.
-- [x] **Phase 4** — Cloudflare Workers deploy config. (PWA manifest still open.)
+- [x] **Phase 2** — bookings + customers. `/customers` CRUD, `/bookings` with reserve→active→close state machine, optional `booking_id` on each transaction.
+- [x] **Phase 3** — receipt upload (Supabase Storage `receipts` bucket), monthly review dashboard at `/review` with category/partner breakdown, CSV export at `/txn/export`, print-to-PDF from the review page.
+- [x] **Phase 4** — Cloudflare Workers deploy config + PWA manifest (`static/manifest.webmanifest`, SVG icon).
+
+## App surface
+
+- `/` — balances and recent transactions.
+- `/txn`, `/txn/new`, `/txn/[id]` — ledger, create, detail (with receipts + linked booking).
+- `/bookings`, `/bookings/new`, `/bookings/[id]` — operational side.
+- `/customers`, `/customers/new`, `/customers/[id]` — customer book + per-customer booking history.
+- `/review?month=YYYY-MM` — monthly P&L, category breakdown, partner activity, bookings summary. Print → PDF.
+- `/txn/export?month=YYYY-MM&kind=…&partner=…&q=…` — CSV download respecting the same filters as the ledger.
+- `/team` — invite a new partner.
 
 ## Design invariants
 

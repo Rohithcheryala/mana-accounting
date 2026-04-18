@@ -15,6 +15,7 @@
   let splitOpen = $state<boolean>(false);
   let settleFrom = $state<number | ''>(data.partners[0]?.id ?? '');
   let settleTo = $state<number | ''>(data.partners[1]?.id ?? '');
+  let bookingId = $state<number | ''>(data.preselectBookingId ?? '');
 
   let shares = $state<Record<number, string>>(
     Object.fromEntries(data.partners.map((p) => [p.id, '']))
@@ -144,6 +145,20 @@
             {/each}
           </select>
         </div>
+      </div>
+    {/if}
+
+    {#if kind !== 'settlement' && data.bookings.length > 0}
+      <div>
+        <label class="label" for="booking_id">Link to booking (optional)</label>
+        <select id="booking_id" name="booking_id" bind:value={bookingId} class="input">
+          <option value="">— none —</option>
+          {#each data.bookings as b}
+            <option value={b.id}>
+              #{b.id} · {b.customer?.name ?? 'unknown'} · {b.start_at.slice(0, 10)}→{b.end_at.slice(0, 10)} · {b.status}
+            </option>
+          {/each}
+        </select>
       </div>
     {/if}
 
