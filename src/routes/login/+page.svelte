@@ -73,7 +73,7 @@
 
   {#if mode === 'login' && !form?.sent}
     <p class="mt-4 text-center text-xs text-slate-400">
-      Access is invite-only. Ask the admin to send you an invite.
+      Access is invite-only. Ask a partner to send you an invite.
     </p>
   {/if}
 </div>
