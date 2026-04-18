@@ -27,7 +27,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     .order('created_at', { ascending: false })
     .limit(200);
 
-  if (q) query = query.ilike('notes', `%${q}%`);
+  if (q) {
+    const { data: matchedCats } = await locals.supabase
+      .from('category')
+      .select('id')
+      .ilike('name', `%${q}%`);
+    const catIds = (matchedCats ?? []).map((c) => c.id);
+    // In .or() strings, PostgREST uses `*` as the wildcard (not `%`).
+    const safeQ = q.replace(/[,()*]/g, ' ');
+    const clauses = [`notes.ilike.*${safeQ}*`];
+    if (catIds.length > 0) clauses.push(`category_id.in.(${catIds.join(',')})`);
+    query = query.or(clauses.join(','));
+  }
   if (kind && ['expense', 'income', 'settlement'].includes(kind)) query = query.eq('kind', kind);
   if (month && /^\d{4}-\d{2}$/.test(month)) {
     const start = `${month}-01`;

@@ -35,7 +35,17 @@ export const GET: RequestHandler = async ({ locals, url }) => {
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false });
 
-  if (q) query = query.ilike('notes', `%${q}%`);
+  if (q) {
+    const { data: matchedCats } = await locals.supabase
+      .from('category')
+      .select('id')
+      .ilike('name', `%${q}%`);
+    const catIds = (matchedCats ?? []).map((c) => c.id);
+    const safeQ = q.replace(/[,()*]/g, ' ');
+    const clauses = [`notes.ilike.*${safeQ}*`];
+    if (catIds.length > 0) clauses.push(`category_id.in.(${catIds.join(',')})`);
+    query = query.or(clauses.join(','));
+  }
   if (kind && ['expense', 'income', 'settlement'].includes(kind)) query = query.eq('kind', kind);
   if (month && /^\d{4}-\d{2}$/.test(month)) {
     const [y, m] = month.split('-').map(Number);

@@ -1,7 +1,10 @@
 <script lang="ts">
   import { formatPaise } from '$lib/money';
+  import MonthPicker from '$lib/components/MonthPicker.svelte';
 
   let { data } = $props();
+
+  let monthValue = $state(data.filters.month);
 
   const partnerName = (id: number | null) =>
     id == null ? '—' : data.partners.find((p) => p.id === id)?.name ?? `#${id}`;
@@ -43,13 +46,9 @@
           <option value={p.id} selected={data.filters.partner === String(p.id)}>{p.name}</option>
         {/each}
       </select>
-      <input
-        name="month"
-        type="month"
-        value={data.filters.month}
-        class="input col-span-2 sm:col-span-1"
-        aria-label="Month"
-      />
+      <div class="col-span-2 sm:col-span-1">
+        <MonthPicker name="month" bind:value={monthValue} allowAny />
+      </div>
     </div>
     <button type="submit" class="btn-primary w-full">Filter</button>
   </form>

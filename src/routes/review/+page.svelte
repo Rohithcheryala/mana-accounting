@@ -1,7 +1,11 @@
 <script lang="ts">
   import { formatPaise, formatSignedPaise } from '$lib/money';
+  import MonthPicker from '$lib/components/MonthPicker.svelte';
 
   let { data } = $props();
+
+  let monthValue = $state(data.month);
+  let formEl: HTMLFormElement | undefined = $state();
 
   const s = $derived(data.summary);
 
@@ -28,8 +32,13 @@
     </div>
   </div>
 
-  <form method="get" class="print:hidden">
-    <input name="month" type="month" value={data.month} class="input num" aria-label="Month" onchange={(e) => (e.currentTarget.form as HTMLFormElement).submit()} />
+  <form method="get" bind:this={formEl} class="print:hidden">
+    <MonthPicker
+      name="month"
+      bind:value={monthValue}
+      allowAny={false}
+      onchange={() => formEl?.submit()}
+    />
   </form>
 
   {#if data.error}
@@ -145,27 +154,28 @@
           <thead>
             <tr class="text-[11px] uppercase tracking-[0.06em] text-slate-400">
               <th class="py-1.5 pr-3 text-left font-medium">Partner</th>
-              <th class="py-1.5 pr-3 text-right font-medium">Paid out</th>
+              <th class="py-1.5 pr-3 text-right font-medium">Paid</th>
               <th class="py-1.5 pr-3 text-right font-medium">Received</th>
-              <th class="py-1.5 pr-3 text-right font-medium">Bore</th>
-              <th class="py-1.5 text-right font-medium">Owed</th>
+              <th class="py-1.5 pr-3 text-right font-medium">Exp&nbsp;share</th>
+              <th class="py-1.5 text-right font-medium">Inc&nbsp;share</th>
             </tr>
           </thead>
           <tbody>
             {#each data.partnerBreakdown as p}
               <tr class="border-t border-slate-100">
                 <td class="py-2 pr-3 font-medium text-slate-800">{p.name}</td>
-                <td class="num py-2 pr-3 text-right text-rose-600">{formatPaise(p.cashOutPaise)}</td>
-                <td class="num py-2 pr-3 text-right text-emerald-600">{formatPaise(p.cashInPaise)}</td>
-                <td class="num py-2 pr-3 text-right text-slate-700">{formatPaise(p.shareExpensePaise)}</td>
-                <td class="num py-2 text-right text-slate-700">{formatPaise(p.shareIncomePaise)}</td>
+                <td class="num py-2 pr-3 text-right {p.cashOutPaise > 0 ? 'text-rose-600' : 'text-slate-400'}">{formatPaise(p.cashOutPaise, { showPaise: true })}</td>
+                <td class="num py-2 pr-3 text-right {p.cashInPaise > 0 ? 'text-emerald-600' : 'text-slate-400'}">{formatPaise(p.cashInPaise, { showPaise: true })}</td>
+                <td class="num py-2 pr-3 text-right {p.shareExpensePaise > 0 ? 'text-slate-700' : 'text-slate-400'}">{formatPaise(p.shareExpensePaise, { showPaise: true })}</td>
+                <td class="num py-2 text-right {p.shareIncomePaise > 0 ? 'text-slate-700' : 'text-slate-400'}">{formatPaise(p.shareIncomePaise, { showPaise: true })}</td>
               </tr>
             {/each}
           </tbody>
         </table>
       </div>
       <p class="text-[11px] text-slate-400">
-        Paid/Received = cash out of pocket. Bore/Owed = share of split across partners.
+        Paid / Received = cash out of or into this partner's pocket.
+        Exp / Inc share = how each txn was split across partners.
       </p>
     </div>
   {/if}
