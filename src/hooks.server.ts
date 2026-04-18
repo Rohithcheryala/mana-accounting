@@ -1,4 +1,5 @@
 import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public';
+import { ADMIN_EMAIL } from '$lib/server/constants';
 import { createServerClient, type CookieMethodsServer } from '@supabase/ssr';
 import { redirect, type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
@@ -41,6 +42,7 @@ const authGuard: Handle = async ({ event, resolve }) => {
   const { session, user } = await event.locals.safeGetSession();
   event.locals.session = session;
   event.locals.user = user;
+  event.locals.isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
 
   const path = event.url.pathname;
   const isPublic = path === '/login' || path.startsWith('/auth/');

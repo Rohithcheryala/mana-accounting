@@ -2,6 +2,38 @@ import { fail, redirect } from '@sveltejs/kit';
 import { rupeesToPaise, equalSplit } from '$lib/money';
 import type { Actions, PageServerLoad } from './$types';
 
+const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
+const ALLOWED_MIME = /^(image\/(png|jpe?g|webp|heic|heif)|application\/pdf)$/i;
+
+async function attachReceipts(
+  supabase: App.Locals['supabase'],
+  txnId: number,
+  files: File[]
+): Promise<string | null> {
+  for (const file of files) {
+    if (file.size === 0) continue;
+    if (file.size > MAX_RECEIPT_BYTES) return `"${file.name}" exceeds 8 MB`;
+    if (!ALLOWED_MIME.test(file.type)) return `"${file.name}" is not an image or PDF`;
+
+    const ext = file.name.includes('.') ? file.name.split('.').pop()!.toLowerCase() : 'bin';
+    const path = `${txnId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+
+    const { error: upErr } = await supabase.storage
+      .from('receipts')
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (upErr) return `Upload failed: ${upErr.message}`;
+
+    const { error: insErr } = await supabase
+      .from('txn_receipt')
+      .insert({ txn_id: txnId, storage_path: path, mime_type: file.type });
+    if (insErr) {
+      await supabase.storage.from('receipts').remove([path]);
+      return `Receipt DB insert failed: ${insErr.message}`;
+    }
+  }
+  return null;
+}
+
 export const load: PageServerLoad = async ({ locals, url }) => {
   const preselectBookingId = url.searchParams.get('booking_id');
   const [partnersRes, categoriesRes, bookingsRes] = await Promise.all([
@@ -78,6 +110,10 @@ export const actions: Actions = {
     const categoryId = categoryRaw ? Number(categoryRaw) : null;
     const bookingId = bookingRaw ? Number(bookingRaw) : null;
 
+    const receipts = data
+      .getAll('receipts')
+      .filter((v): v is File => v instanceof File && v.size > 0);
+
     // shares
     const partnersRes = await locals.supabase.from('partner').select('id').order('id');
     const partners = partnersRes.data ?? [];
@@ -112,6 +148,11 @@ export const actions: Actions = {
         to_partner: Number(toRaw)
       });
       if (sErr) return fail(500, { message: sErr.message });
+
+      if (receipts.length > 0) {
+        const upErr = await attachReceipts(locals.supabase, inserted.id, receipts);
+        if (upErr) return fail(500, { message: `Txn saved (#${inserted.id}) but receipts failed: ${upErr}` });
+      }
 
       throw redirect(303, `/txn/${inserted.id}`);
     }
@@ -163,6 +204,11 @@ export const actions: Actions = {
       return fail(500, { message: sErr.message });
     }
 
-    throw redirect(303, '/');
+    if (receipts.length > 0) {
+      const upErr = await attachReceipts(locals.supabase, inserted.id, receipts);
+      if (upErr) return fail(500, { message: `Txn saved (#${inserted.id}) but receipts failed: ${upErr}` });
+    }
+
+    throw redirect(303, receipts.length > 0 ? `/txn/${inserted.id}` : '/');
   }
 };

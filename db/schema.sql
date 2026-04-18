@@ -110,6 +110,23 @@ CREATE TABLE IF NOT EXISTS txn_receipt (
 
 CREATE INDEX IF NOT EXISTS txn_receipt_txn_idx ON txn_receipt (txn_id);
 
+-- ------------------------------------------------------------------ DOCS
+-- Shared document store: insurance, RC, PUC, permits, licences, etc.
+CREATE TABLE IF NOT EXISTS doc (
+  id            bigserial PRIMARY KEY,
+  name          text NOT NULL,
+  category      text,
+  storage_path  text NOT NULL,
+  mime_type     text,
+  size_bytes    bigint,
+  notes         text,
+  uploaded_by   uuid,
+  uploaded_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS doc_uploaded_at_idx ON doc (uploaded_at DESC);
+CREATE INDEX IF NOT EXISTS doc_category_idx    ON doc (category);
+
 -- ------------------------------------------------------------------ SHARE SUM INVARIANT
 -- For expense/income txns, sum of shares must equal amount_paise.
 -- Checked after insert/update on txn_share (constraint trigger, deferred to end of txn).
@@ -199,12 +216,13 @@ ALTER TABLE txn          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE txn_share    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settlement   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE txn_receipt  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE doc          ENABLE ROW LEVEL SECURITY;
 
 DO $$
 DECLARE t text;
 BEGIN
   FOR t IN SELECT unnest(ARRAY[
-    'partner','category','customer','booking','txn','txn_share','settlement','txn_receipt'
+    'partner','category','customer','booking','txn','txn_share','settlement','txn_receipt','doc'
   ]) LOOP
     EXECUTE format('DROP POLICY IF EXISTS auth_all ON %I', t);
     EXECUTE format('CREATE POLICY auth_all ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)', t);

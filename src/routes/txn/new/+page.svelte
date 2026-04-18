@@ -58,7 +58,7 @@
     <a href="/" class="text-xs text-slate-500 hover:text-slate-900">Cancel</a>
   </div>
 
-  <form method="post" use:enhance class="space-y-5">
+  <form method="post" enctype="multipart/form-data" use:enhance class="space-y-5">
     <!-- Kind toggle -->
     <div role="radiogroup" aria-label="Transaction kind" class="grid grid-cols-3 gap-2">
       {#each ['expense', 'income', 'settlement'] as k}
@@ -267,6 +267,19 @@
         </div>
       </details>
     {/if}
+
+    <div>
+      <label class="label" for="receipts">Receipts (optional)</label>
+      <input
+        id="receipts"
+        name="receipts"
+        type="file"
+        accept="image/*,application/pdf"
+        multiple
+        class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
+      />
+      <p class="mt-1 text-[11px] text-slate-400">Images or PDF, up to 8 MB each. You can add more on the detail page too.</p>
+    </div>
 
     {#if form?.message}
       <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
