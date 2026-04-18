@@ -21,6 +21,11 @@
     </div>
 
     <div>
+      <label class="label" for="email">Email</label>
+      <input id="email" name="email" type="email" inputmode="email" autocapitalize="none" autocomplete="email" value={form?.values?.email ?? ''} class="input" placeholder="optional" />
+    </div>
+
+    <div>
       <label class="label" for="kyc">KYC</label>
       <input
         id="kyc"

@@ -7,7 +7,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
   const preselect = url.searchParams.get('customer_id');
   const { data } = await locals.supabase
     .from('customer')
-    .select('id, name, phone, kyc_note, notes, created_at')
+    .select('id, name, phone, notes, created_at')
     .order('name')
     .returns<Customer[]>();
 

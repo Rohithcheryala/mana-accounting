@@ -12,7 +12,7 @@
     <input
       name="q"
       type="search"
-      placeholder="Search name or phone…"
+      placeholder="Search name, phone, or email…"
       value={data.filters.q}
       class="input"
       autocomplete="off"
@@ -36,10 +36,10 @@
           >
             <div class="min-w-0 flex-1">
               <div class="truncate text-[15px] font-medium leading-tight text-slate-900">{c.name}</div>
-              <div class="mt-0.5 text-[11px] text-slate-500">
+              <div class="mt-0.5 flex flex-wrap items-center text-[11px] text-slate-500">
                 {#if c.phone}<span class="num">{c.phone}</span>{/if}
-                {#if c.phone && c.kyc_note}<span class="divider-dot"></span>{/if}
-                {#if c.kyc_note}{c.kyc_note}{/if}
+                {#if c.phone && c.email}<span class="divider-dot"></span>{/if}
+                {#if c.email}<span class="truncate">{c.email}</span>{/if}
               </div>
             </div>
             <svg viewBox="0 0 24 24" class="h-4 w-4 shrink-0 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

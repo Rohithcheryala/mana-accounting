@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS customer (
   id         bigserial PRIMARY KEY,
   name       text NOT NULL,
   phone      text,
-  kyc_note   text,
+  email      text,
   notes      text,
   created_at timestamptz NOT NULL DEFAULT now()
 );

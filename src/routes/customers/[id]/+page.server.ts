@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
   const [customerRes, bookingsRes, kycRes] = await Promise.all([
     locals.supabase
       .from('customer')
-      .select('id, name, phone, kyc_note, notes, created_at')
+      .select('id, name, phone, email, notes, created_at')
       .eq('id', id)
       .maybeSingle()
       .returns<Customer>(),
@@ -56,13 +56,14 @@ export const actions: Actions = {
     const data = await request.formData();
     const name = String(data.get('name') ?? '').trim();
     const phone = String(data.get('phone') ?? '').trim() || null;
+    const email = String(data.get('email') ?? '').trim() || null;
     const notes = String(data.get('notes') ?? '').trim() || null;
 
     if (!name) return fail(400, { message: 'Name is required' });
 
     const { error: upErr } = await locals.supabase
       .from('customer')
-      .update({ name, phone, notes })
+      .update({ name, phone, email, notes })
       .eq('id', id);
     if (upErr) return fail(500, { message: upErr.message });
     return { ok: true };

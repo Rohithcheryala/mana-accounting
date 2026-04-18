@@ -9,29 +9,30 @@ export const actions: Actions = {
     const data = await request.formData();
     const name = String(data.get('name') ?? '').trim();
     const phone = String(data.get('phone') ?? '').trim() || null;
+    const email = String(data.get('email') ?? '').trim() || null;
     const notes = String(data.get('notes') ?? '').trim() || null;
 
     if (!name) {
-      return fail(400, { message: 'Name is required', values: { name, phone, notes } });
+      return fail(400, { message: 'Name is required', values: { name, phone, email, notes } });
     }
 
     const kycFiles = data.getAll('kyc').filter((v): v is File => v instanceof File && v.size > 0);
     for (const f of kycFiles) {
       if (f.size > MAX_KYC_BYTES) {
-        return fail(400, { message: `"${f.name}" exceeds 8 MB`, values: { name, phone, notes } });
+        return fail(400, { message: `"${f.name}" exceeds 8 MB`, values: { name, phone, email, notes } });
       }
       if (!KYC_MIME.test(f.type)) {
-        return fail(400, { message: `"${f.name}" must be an image or PDF`, values: { name, phone, notes } });
+        return fail(400, { message: `"${f.name}" must be an image or PDF`, values: { name, phone, email, notes } });
       }
     }
 
     const { data: inserted, error } = await locals.supabase
       .from('customer')
-      .insert({ name, phone, notes })
+      .insert({ name, phone, email, notes })
       .select('id')
       .single();
     if (error || !inserted) {
-      return fail(500, { message: error?.message ?? 'Insert failed', values: { name, phone, notes } });
+      return fail(500, { message: error?.message ?? 'Insert failed', values: { name, phone, email, notes } });
     }
 
     for (const file of kycFiles) {
@@ -43,7 +44,7 @@ export const actions: Actions = {
       if (upErr) {
         return fail(500, {
           message: `Customer saved (#${inserted.id}) but KYC upload failed: ${upErr.message}`,
-          values: { name, phone, notes }
+          values: { name, phone, email, notes }
         });
       }
       const { error: insErr } = await locals.supabase
@@ -53,7 +54,7 @@ export const actions: Actions = {
         await locals.supabase.storage.from('kyc').remove([path]);
         return fail(500, {
           message: `Customer saved (#${inserted.id}) but KYC DB insert failed: ${insErr.message}`,
-          values: { name, phone, notes }
+          values: { name, phone, email, notes }
         });
       }
     }

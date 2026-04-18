@@ -47,7 +47,7 @@ export interface Customer {
   id: number;
   name: string;
   phone: string | null;
-  kyc_note: string | null;
+  email: string | null;
   notes: string | null;
   created_at: string;
 }

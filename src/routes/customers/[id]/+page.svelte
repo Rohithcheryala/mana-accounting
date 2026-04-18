@@ -29,12 +29,12 @@
           {#if data.customer.phone}
             <a href="tel:{data.customer.phone}" class="num mt-1 block text-sm text-slate-600 hover:underline">{data.customer.phone}</a>
           {/if}
+          {#if data.customer.email}
+            <a href="mailto:{data.customer.email}" class="mt-0.5 block text-sm text-slate-600 hover:underline">{data.customer.email}</a>
+          {/if}
         </div>
         <button class="btn-ghost text-xs" style="min-height: 32px; padding: 0 10px;" onclick={() => (editing = true)}>Edit</button>
       </div>
-      {#if data.customer.kyc_note}
-        <div class="pt-1 text-[13px] text-slate-700"><span class="text-[11px] uppercase tracking-[0.08em] text-slate-400">KYC note</span> · {data.customer.kyc_note}</div>
-      {/if}
       {#if data.customer.notes}
         <p class="border-t border-slate-100 pt-2 text-sm leading-snug text-slate-700">{data.customer.notes}</p>
       {/if}
@@ -51,6 +51,10 @@
       <div>
         <label class="label" for="phone">Phone</label>
         <input id="phone" name="phone" type="tel" inputmode="tel" value={data.customer.phone ?? ''} class="input num" />
+      </div>
+      <div>
+        <label class="label" for="email">Email</label>
+        <input id="email" name="email" type="email" inputmode="email" autocapitalize="none" autocomplete="email" value={data.customer.email ?? ''} class="input" />
       </div>
       <div>
         <label class="label" for="notes">Notes</label>
