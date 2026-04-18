@@ -90,4 +90,7 @@
     content: '·';
     @apply mx-1.5 text-slate-300;
   }
+  .cat-chip {
+    @apply inline-flex cursor-pointer select-none items-center rounded-full border border-slate-300 bg-white px-3 py-1.5 text-[13px] font-medium text-slate-700 transition-colors hover:border-slate-400 peer-checked:border-slate-900 peer-checked:bg-slate-900 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-slate-900 peer-focus-visible:ring-offset-1;
+  }
 }

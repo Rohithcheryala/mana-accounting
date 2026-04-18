@@ -22,7 +22,12 @@ export const actions: Actions = {
     const data = await request.formData();
     const values = Object.fromEntries(data);
 
+    const customerMode = String(data.get('customer_mode') ?? 'existing');
     const customerIdRaw = String(data.get('customer_id') ?? '').trim();
+    const newCustName = String(data.get('new_customer_name') ?? '').trim();
+    const newCustPhone = String(data.get('new_customer_phone') ?? '').trim() || null;
+    const newCustKyc = String(data.get('new_customer_kyc') ?? '').trim() || null;
+
     const start = String(data.get('start_at') ?? '').trim();
     const end = String(data.get('end_at') ?? '').trim();
     const rateStr = String(data.get('quoted_rate') ?? '').trim();
@@ -32,7 +37,21 @@ export const actions: Actions = {
     const platformFeeStr = String(data.get('platform_fee_pct') ?? '').trim() || '0';
     const notes = String(data.get('notes') ?? '').trim() || null;
 
-    if (!customerIdRaw) return fail(400, { message: 'Pick a customer', values });
+    let customerId: number | null = null;
+    if (customerMode === 'new') {
+      if (!newCustName) return fail(400, { message: 'Customer name is required', values });
+      const { data: cust, error: custErr } = await locals.supabase
+        .from('customer')
+        .insert({ name: newCustName, phone: newCustPhone, kyc_note: newCustKyc })
+        .select('id')
+        .single();
+      if (custErr || !cust) return fail(500, { message: `Customer create failed: ${custErr?.message ?? 'unknown'}`, values });
+      customerId = cust.id;
+    } else {
+      if (!customerIdRaw) return fail(400, { message: 'Pick a customer', values });
+      customerId = Number(customerIdRaw);
+    }
+
     if (!start || !end) return fail(400, { message: 'Start and end required', values });
     if (new Date(end) <= new Date(start)) return fail(400, { message: 'End must be after start', values });
 
@@ -58,7 +77,7 @@ export const actions: Actions = {
     const { data: inserted, error } = await locals.supabase
       .from('booking')
       .insert({
-        customer_id: Number(customerIdRaw),
+        customer_id: customerId,
         start_at: start,
         end_at: end,
         quoted_rate_paise,

@@ -119,13 +119,19 @@
 
       <!-- Category -->
       <div>
-        <label class="label" for="category">Category</label>
-        <select id="category" name="category_id" bind:value={categoryId} class="input">
-          <option value="">—</option>
+        <span class="label">Category</span>
+        <div class="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Category">
+          <label class="relative">
+            <input type="radio" name="category_id" value="" bind:group={categoryId} class="peer sr-only" />
+            <span class="cat-chip">—</span>
+          </label>
           {#each filteredCategories as c}
-            <option value={c.id}>{c.name}</option>
+            <label class="relative">
+              <input type="radio" name="category_id" value={c.id} bind:group={categoryId} class="peer sr-only" />
+              <span class="cat-chip">{c.name}</span>
+            </label>
           {/each}
-        </select>
+        </div>
       </div>
     {:else}
       <div class="grid grid-cols-2 gap-3">

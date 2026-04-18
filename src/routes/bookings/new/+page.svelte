@@ -16,9 +16,15 @@
     return typeof v === 'string' ? v : '';
   };
 
+  let customerMode = $state<'existing' | 'new'>(
+    fv('customer_mode') === 'new' || data.customers.length === 0 ? 'new' : 'existing'
+  );
   let customerId = $state<number | ''>(
     Number(fv('customer_id')) || data.preselectedCustomerId || data.customers[0]?.id || ''
   );
+  let newCustName = $state<string>(fv('new_customer_name'));
+  let newCustPhone = $state<string>(fv('new_customer_phone'));
+  let newCustKyc = $state<string>(fv('new_customer_kyc'));
   let startAt = $state<string>(fv('start_at') || defaultStart);
   let endAt = $state<string>(fv('end_at') || defaultEnd);
   let rate = $state<string>(fv('quoted_rate'));
@@ -50,20 +56,62 @@
     <a href="/bookings" class="text-xs text-slate-500 hover:text-slate-900">Cancel</a>
   </div>
 
-  {#if data.customers.length === 0}
-    <div class="card text-center text-sm text-slate-500">
-      You need a customer first.
-      <a href="/customers/new" class="font-medium text-slate-700 underline">Add one</a>.
-    </div>
-  {:else}
     <form method="post" use:enhance class="space-y-5">
-      <div>
-        <label class="label" for="customer_id">Customer</label>
-        <select id="customer_id" name="customer_id" bind:value={customerId} class="input" required>
-          {#each data.customers as c}
-            <option value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ''}</option>
-          {/each}
-        </select>
+      <input type="hidden" name="customer_mode" value={customerMode} />
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="label mb-0">Customer</span>
+          <div class="inline-flex rounded-md border border-slate-200 bg-slate-100 p-0.5 text-[11px] font-medium">
+            <button
+              type="button"
+              onclick={() => (customerMode = 'existing')}
+              disabled={data.customers.length === 0}
+              class="rounded px-2 py-1 transition-colors disabled:cursor-not-allowed disabled:opacity-50 {customerMode === 'existing' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}"
+            >
+              existing
+            </button>
+            <button
+              type="button"
+              onclick={() => (customerMode = 'new')}
+              class="rounded px-2 py-1 transition-colors {customerMode === 'new' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}"
+            >
+              + new
+            </button>
+          </div>
+        </div>
+
+        {#if customerMode === 'existing'}
+          {#if data.customers.length === 0}
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              No customers yet — switch to <strong>+ new</strong> above.
+            </div>
+          {:else}
+            <select id="customer_id" name="customer_id" bind:value={customerId} class="input" required>
+              {#each data.customers as c}
+                <option value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ''}</option>
+              {/each}
+            </select>
+          {/if}
+        {:else}
+          <div class="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div>
+              <label class="label" for="new_customer_name">Name</label>
+              <input id="new_customer_name" name="new_customer_name" type="text" class="input" required bind:value={newCustName} autocomplete="name" />
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="label" for="new_customer_phone">Phone</label>
+                <input id="new_customer_phone" name="new_customer_phone" type="tel" inputmode="tel" class="input num" bind:value={newCustPhone} placeholder="+91…" />
+              </div>
+              <div>
+                <label class="label" for="new_customer_kyc">KYC</label>
+                <input id="new_customer_kyc" name="new_customer_kyc" type="text" class="input" bind:value={newCustKyc} placeholder="Aadhaar / DL last 4" />
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500">Customer will be saved when you save the booking.</p>
+          </div>
+        {/if}
       </div>
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -119,5 +167,4 @@
 
       <button type="submit" class="btn-primary w-full">Save booking</button>
     </form>
-  {/if}
 </section>
