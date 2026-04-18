@@ -52,6 +52,15 @@ export interface Customer {
   created_at: string;
 }
 
+export interface CustomerKyc {
+  id: number;
+  customer_id: number;
+  storage_path: string;
+  mime_type: string | null;
+  label: string | null;
+  uploaded_at: string;
+}
+
 export type BookingStatus = 'reserved' | 'active' | 'closed' | 'cancelled';
 
 export interface Booking {

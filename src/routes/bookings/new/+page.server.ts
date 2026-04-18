@@ -26,7 +26,6 @@ export const actions: Actions = {
     const customerIdRaw = String(data.get('customer_id') ?? '').trim();
     const newCustName = String(data.get('new_customer_name') ?? '').trim();
     const newCustPhone = String(data.get('new_customer_phone') ?? '').trim() || null;
-    const newCustKyc = String(data.get('new_customer_kyc') ?? '').trim() || null;
 
     const start = String(data.get('start_at') ?? '').trim();
     const end = String(data.get('end_at') ?? '').trim();
@@ -42,7 +41,7 @@ export const actions: Actions = {
       if (!newCustName) return fail(400, { message: 'Customer name is required', values });
       const { data: cust, error: custErr } = await locals.supabase
         .from('customer')
-        .insert({ name: newCustName, phone: newCustPhone, kyc_note: newCustKyc })
+        .insert({ name: newCustName, phone: newCustPhone })
         .select('id')
         .single();
       if (custErr || !cust) return fail(500, { message: `Customer create failed: ${custErr?.message ?? 'unknown'}`, values });

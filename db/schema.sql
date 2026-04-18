@@ -33,6 +33,18 @@ CREATE TABLE IF NOT EXISTS customer (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- ------------------------------------------------------------------ CUSTOMER KYC
+CREATE TABLE IF NOT EXISTS customer_kyc (
+  id            bigserial PRIMARY KEY,
+  customer_id   bigint NOT NULL REFERENCES customer(id) ON DELETE CASCADE,
+  storage_path  text NOT NULL,
+  mime_type     text,
+  label         text,
+  uploaded_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS customer_kyc_customer_idx ON customer_kyc (customer_id);
+
 -- ------------------------------------------------------------------ BOOKINGS
 CREATE TABLE IF NOT EXISTS booking (
   id                      bigserial PRIMARY KEY,
@@ -208,21 +220,22 @@ LEFT JOIN settle ON settle.partner_id = p.id;
 -- ------------------------------------------------------------------ ROW LEVEL SECURITY
 -- Admin-only app: a single authenticated user has full access.
 -- Any signed-in user can read/write everything. Unauth'd users see nothing.
-ALTER TABLE partner      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE category     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customer     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE booking      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE txn          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE txn_share    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE settlement   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE txn_receipt  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE doc          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE partner       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE category      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customer      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customer_kyc  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE booking       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE txn           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE txn_share     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settlement    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE txn_receipt   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE doc           ENABLE ROW LEVEL SECURITY;
 
 DO $$
 DECLARE t text;
 BEGIN
   FOR t IN SELECT unnest(ARRAY[
-    'partner','category','customer','booking','txn','txn_share','settlement','txn_receipt','doc'
+    'partner','category','customer','customer_kyc','booking','txn','txn_share','settlement','txn_receipt','doc'
   ]) LOOP
     EXECUTE format('DROP POLICY IF EXISTS auth_all ON %I', t);
     EXECUTE format('CREATE POLICY auth_all ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)', t);

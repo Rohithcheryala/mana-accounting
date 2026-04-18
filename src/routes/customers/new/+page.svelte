@@ -9,7 +9,7 @@
     <a href="/customers" class="text-xs text-slate-500 hover:text-slate-900">Cancel</a>
   </div>
 
-  <form method="post" use:enhance class="space-y-4">
+  <form method="post" enctype="multipart/form-data" use:enhance class="space-y-4">
     <div>
       <label class="label" for="name">Name</label>
       <input id="name" name="name" type="text" required value={form?.values?.name ?? ''} class="input" autocomplete="name" />
@@ -21,8 +21,16 @@
     </div>
 
     <div>
-      <label class="label" for="kyc_note">KYC note</label>
-      <input id="kyc_note" name="kyc_note" type="text" value={form?.values?.kyc_note ?? ''} class="input" placeholder="Aadhaar last 4, DL no, etc." />
+      <label class="label" for="kyc">KYC</label>
+      <input
+        id="kyc"
+        name="kyc"
+        type="file"
+        accept="image/*,application/pdf"
+        multiple
+        class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
+      />
+      <p class="mt-1 text-[11px] text-slate-400">Aadhaar / DL / etc. Images or PDF, up to 8 MB each. You can add more later.</p>
     </div>
 
     <div>

@@ -24,7 +24,6 @@
   );
   let newCustName = $state<string>(fv('new_customer_name'));
   let newCustPhone = $state<string>(fv('new_customer_phone'));
-  let newCustKyc = $state<string>(fv('new_customer_kyc'));
   let startAt = $state<string>(fv('start_at') || defaultStart);
   let endAt = $state<string>(fv('end_at') || defaultEnd);
   let rate = $state<string>(fv('quoted_rate'));
@@ -99,17 +98,11 @@
               <label class="label" for="new_customer_name">Name</label>
               <input id="new_customer_name" name="new_customer_name" type="text" class="input" required bind:value={newCustName} autocomplete="name" />
             </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="label" for="new_customer_phone">Phone</label>
-                <input id="new_customer_phone" name="new_customer_phone" type="tel" inputmode="tel" class="input num" bind:value={newCustPhone} placeholder="+91…" />
-              </div>
-              <div>
-                <label class="label" for="new_customer_kyc">KYC</label>
-                <input id="new_customer_kyc" name="new_customer_kyc" type="text" class="input" bind:value={newCustKyc} placeholder="Aadhaar / DL last 4" />
-              </div>
+            <div>
+              <label class="label" for="new_customer_phone">Phone</label>
+              <input id="new_customer_phone" name="new_customer_phone" type="tel" inputmode="tel" class="input num" bind:value={newCustPhone} placeholder="+91…" />
             </div>
-            <p class="text-[11px] text-slate-500">Customer will be saved when you save the booking.</p>
+            <p class="text-[11px] text-slate-500">Customer is saved with the booking. Upload KYC docs from the customer page after saving.</p>
           </div>
         {/if}
       </div>
