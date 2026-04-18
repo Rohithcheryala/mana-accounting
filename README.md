@@ -6,7 +6,7 @@ Ledger app for a self-drive car rental run by three equal partners. Invite-only;
 
 - **SvelteKit** (TypeScript) + **Tailwind CSS**
 - **Supabase** — Postgres, Auth, Storage
-- Deploy target: **Cloudflare Pages** (no TOS issue with commercial use)
+- Deploy target: **Cloudflare Workers** (with Static Assets)
 
 ## One-time setup
 
@@ -51,41 +51,47 @@ Open http://localhost:5173.
 
 Money is stored in **paise** (integers) everywhere. No floats.
 
-## Deploying to Cloudflare Pages
+## Deploying to Cloudflare Workers (with Static Assets)
 
-The project uses `@sveltejs/adapter-cloudflare`. Two paths:
+The project uses `@sveltejs/adapter-cloudflare`. It deploys to **Workers**, not Pages — Cloudflare merged the two platforms and Workers-with-Static-Assets is now the recommended target.
 
 ### A. Git-connected deploy (recommended)
 
 1. Push this repo to GitHub.
-2. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**. Pick the repo.
-3. Build settings:
-   - **Framework preset:** SvelteKit
+2. Cloudflare dashboard → **Workers & Pages → Create → Workers → Import a repository**. Pick the repo.
+3. Build configuration:
    - **Build command:** `npm run build`
-   - **Build output directory:** `.svelte-kit/cloudflare`
-4. **Settings → Environment variables (Production)** — add:
+   - **Deploy command:** `npx wrangler deploy`
+4. **Build → Variables and secrets** (build-time, needed by `$env/static/public` at compile):
    - `PUBLIC_SUPABASE_URL`
    - `PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY` (**mark as Secret**)
-5. **Settings → Functions → Compatibility flags** — add `nodejs_compat` for both Production and Preview. (Also already set in `wrangler.toml`.)
-6. In Supabase → **Authentication → URL Configuration**, add your Pages URL (e.g. `https://mana-accounting.pages.dev`) to the allowed redirect URLs.
-7. Trigger a deploy. Every push to the main branch redeploys.
+5. **Settings → Variables and Secrets** (runtime):
+   - `SUPABASE_SERVICE_ROLE_KEY` — mark as **Secret**
+6. Compatibility flag `nodejs_compat` is already set in `wrangler.toml`, so no extra dashboard step needed.
+7. In Supabase → **Authentication → URL Configuration**, add your Worker URL (e.g. `https://mana-accounting.<subdomain>.workers.dev`) to the allowed redirect URLs — otherwise invite/reset links will fail to callback.
+8. Trigger a deploy. Every push to `main` redeploys.
 
 ### B. Manual one-off via wrangler
 
 ```sh
 npm run build
-npx wrangler pages deploy .svelte-kit/cloudflare --project-name mana-accounting
+npx wrangler deploy
 ```
 
-Set the env vars via `npx wrangler pages secret put SUPABASE_SERVICE_ROLE_KEY --project-name mana-accounting` (and the public ones as regular env vars in the dashboard or with `--compatibility-flag=nodejs_compat`).
+Set the runtime secret once:
+
+```sh
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+```
+
+The two `PUBLIC_*` vars must be in your local `.env` at build time (they're inlined into the client bundle).
 
 ## Phase status
 
 - [x] **Phase 1** — foundation, schema, auth, transaction entry/list/detail, dashboard.
 - [ ] **Phase 2** — bookings + customers.
 - [ ] **Phase 3** — receipt upload, monthly review dashboard, CSV/PDF export.
-- [x] **Phase 4** — Cloudflare Pages deploy config. (PWA manifest still open.)
+- [x] **Phase 4** — Cloudflare Workers deploy config. (PWA manifest still open.)
 
 ## Design invariants
 
