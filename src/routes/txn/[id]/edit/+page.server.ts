@@ -158,12 +158,13 @@ export const actions: Actions = {
         .eq('id', id);
       if (upErr) return fail(500, { message: upErr.message });
 
-      // Replace shares atomically (sum invariant is deferrable so delete + insert inside the same statement pairing is fine).
-      const { error: delErr } = await locals.supabase.from('txn_share').delete().eq('txn_id', id);
-      if (delErr) return fail(500, { message: delErr.message });
-      const rows = shares.map((s) => ({ ...s, txn_id: id }));
-      const { error: insErr } = await locals.supabase.from('txn_share').insert(rows);
-      if (insErr) return fail(500, { message: insErr.message });
+      // Replace shares in a single transaction so the deferrable sum-check
+      // trigger fires only once, after the new rows are in place.
+      const { error: rpcErr } = await locals.supabase.rpc('replace_txn_shares', {
+        p_txn_id: id,
+        p_shares: shares
+      });
+      if (rpcErr) return fail(500, { message: rpcErr.message });
     }
 
     const after = await snapshotTxn(locals.supabase, id);
