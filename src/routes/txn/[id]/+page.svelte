@@ -15,6 +15,69 @@
         ? 'text-rose-600'
         : 'text-slate-900'
   );
+
+  type SnapshotMap = Record<string, unknown>;
+  type SharePair = { partner_id: number; share_paise: number };
+
+  const FIELD_LABELS: Record<string, string> = {
+    occurred_on: 'date',
+    amount_paise: 'amount',
+    counterparty: 'counterparty',
+    category_id: 'category',
+    booking_id: 'booking',
+    notes: 'notes',
+    voided_at: 'voided',
+    voided_reason: 'void reason'
+  };
+
+  function fmtValue(field: string, v: unknown): string {
+    if (v == null || v === '') return '—';
+    if (field === 'amount_paise') return formatPaise(Number(v), { showPaise: true });
+    if (field === 'counterparty') return partnerName(Number(v));
+    if (field === 'occurred_on') return String(v);
+    if (field === 'voided_at') return v ? 'yes' : 'no';
+    if (Array.isArray(v)) return JSON.stringify(v);
+    return String(v);
+  }
+
+  function summarizeChanges(before: SnapshotMap | null, after: SnapshotMap | null) {
+    const rows: { field: string; before: string; after: string }[] = [];
+    if (!before || !after) return rows;
+    for (const key of Object.keys(FIELD_LABELS)) {
+      const a = before[key];
+      const b = after[key];
+      if (JSON.stringify(a) !== JSON.stringify(b)) {
+        rows.push({ field: FIELD_LABELS[key], before: fmtValue(key, a), after: fmtValue(key, b) });
+      }
+    }
+    // Shares diff
+    const sa = (before.shares as SharePair[]) ?? [];
+    const sb = (after.shares as SharePair[]) ?? [];
+    for (const p of data.partners) {
+      const av = sa.find((x) => x.partner_id === p.id)?.share_paise ?? 0;
+      const bv = sb.find((x) => x.partner_id === p.id)?.share_paise ?? 0;
+      if (av !== bv) {
+        rows.push({
+          field: `${p.name}'s share`,
+          before: formatPaise(av, { showPaise: true }),
+          after: formatPaise(bv, { showPaise: true })
+        });
+      }
+    }
+    return rows;
+  }
+
+  function fmtTs(iso: string): string {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  const actionTone = (a: string) =>
+    a === 'create' ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    : a === 'edit' ? 'bg-amber-50 text-amber-700 border-amber-200'
+    : a === 'void' ? 'bg-rose-50 text-rose-700 border-rose-200'
+    : 'bg-slate-100 text-slate-600 border-slate-200';
 </script>
 
 <section class="space-y-4">
@@ -42,6 +105,14 @@
           </svg>
         </summary>
         <div class="absolute right-0 top-full z-20 mt-1 w-64 rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
+          {#if !t.voided_at}
+            <a
+              href="/txn/{t.id}/edit"
+              class="block w-full rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+            >
+              Edit transaction
+            </a>
+          {/if}
           {#if t.voided_at}
             <form method="post" action="?/unvoid" use:enhance>
               <button class="block w-full rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100">
@@ -54,7 +125,7 @@
               action="?/void"
               use:enhance
               onsubmit={(e) => { if (!confirm('Void this transaction?')) e.preventDefault(); }}
-              class="space-y-2 p-1"
+              class="space-y-2 border-t border-slate-100 p-1 pt-2"
             >
               <input
                 name="reason"
@@ -211,5 +282,44 @@
     <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
       {form.message}
     </div>
+  {/if}
+
+  {#if data.audit.length > 0}
+    <details class="card">
+      <summary class="flex cursor-pointer items-center justify-between text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+        <span>History · {data.audit.length}</span>
+        <svg viewBox="0 0 24 24" class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </summary>
+      <ul class="mt-3 space-y-3 border-t border-slate-100 pt-3">
+        {#each data.audit as entry}
+          {@const diffs = entry.action === 'edit' ? summarizeChanges(entry.before, entry.after) : []}
+          <li class="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
+            <div class="flex flex-wrap items-center gap-2 text-[12px]">
+              <span class="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {actionTone(entry.action)}">{entry.action}</span>
+              <span class="num text-slate-500">{fmtTs(entry.changed_at)}</span>
+              {#if entry.changed_by_email}
+                <span class="divider-dot"></span>
+                <span class="text-slate-600">{entry.changed_by_email}</span>
+              {/if}
+            </div>
+            {#if entry.note}
+              <p class="mt-1 text-[13px] text-slate-700">{entry.note}</p>
+            {/if}
+            {#if entry.action === 'edit' && diffs.length > 0}
+              <ul class="mt-2 space-y-1 text-[12px]">
+                {#each diffs as d}
+                  <li class="flex flex-wrap items-baseline gap-x-2">
+                    <span class="w-24 shrink-0 text-slate-500">{d.field}</span>
+                    <span class="text-rose-600 line-through">{d.before}</span>
+                    <svg viewBox="0 0 24 24" class="h-3 w-3 shrink-0 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                    <span class="text-emerald-700">{d.after}</span>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+    </details>
   {/if}
 </section>

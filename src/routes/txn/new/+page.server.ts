@@ -1,5 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { rupeesToPaise, equalSplit } from '$lib/money';
+import { snapshotTxn, writeAudit } from '$lib/server/txn-audit';
 import type { Actions, PageServerLoad } from './$types';
 
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
@@ -171,6 +172,14 @@ export const actions: Actions = {
         if (upErr) return fail(500, { message: `Txn saved (#${inserted.id}) but receipts failed: ${upErr}` });
       }
 
+      const after = await snapshotTxn(locals.supabase, inserted.id);
+      await writeAudit(locals.supabase, {
+        txnId: inserted.id,
+        action: 'create',
+        after,
+        changedBy: locals.user?.id ?? null
+      });
+
       throw redirect(303, `/txn/${inserted.id}`);
     }
 
@@ -225,6 +234,14 @@ export const actions: Actions = {
       const upErr = await attachReceipts(locals.supabase, inserted.id, receipts);
       if (upErr) return fail(500, { message: `Txn saved (#${inserted.id}) but receipts failed: ${upErr}` });
     }
+
+    const after = await snapshotTxn(locals.supabase, inserted.id);
+    await writeAudit(locals.supabase, {
+      txnId: inserted.id,
+      action: 'create',
+      after,
+      changedBy: locals.user?.id ?? null
+    });
 
     throw redirect(303, receipts.length > 0 ? `/txn/${inserted.id}` : '/');
   }

@@ -1,5 +1,6 @@
 -- =========================================================================
--- Seed data for mana-accounting. Safe to re-run (uses ON CONFLICT DO NOTHING).
+-- Seed data. Runs automatically on `supabase db reset` (local dev).
+-- Safe to re-run — all inserts use ON CONFLICT DO NOTHING.
 -- =========================================================================
 
 INSERT INTO partner (id, name) VALUES

@@ -32,8 +32,8 @@
 
   {#if data.balancesError}
     <div class="card border-rose-200 bg-rose-50 text-sm text-rose-700">
-      Couldn't load balances: {data.balancesError}. Did you apply <code>db/schema.sql</code> and
-      <code>db/seed.sql</code> to your Supabase project?
+      Couldn't load balances: {data.balancesError}. Have you applied the migrations
+      (<code>supabase db push</code>) and seeded the partners/categories?
     </div>
   {/if}
 

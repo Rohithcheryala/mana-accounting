@@ -14,11 +14,10 @@ Ledger app for a self-drive car rental run by three equal partners. Invite-only;
 
 1. Go to [supabase.com](https://supabase.com) → New project.
 2. Pick a strong DB password and the nearest region.
-3. Once provisioned, open **SQL Editor**.
-4. Paste and run `db/schema.sql`, then `db/seed.sql`, then `db/storage.sql` (creates the `receipts` bucket + RLS).
-5. In **Authentication → Providers → Email**, **disable "Allow new users to sign up"**. Access is invite-only.
-6. In **Authentication → Users**, invite yourself as the first partner. Click the email link and set a password at `/set-password`.
-7. Additional partners are invited from the app itself at `/team`. Any signed-in partner can invite — all three are peers.
+3. Link the CLI to this project and apply migrations (see **Migrations** below).
+4. In **Authentication → Providers → Email**, **disable "Allow new users to sign up"**. Access is invite-only.
+5. In **Authentication → Users**, invite yourself as the first partner. Click the email link and set a password at `/set-password`.
+6. Additional partners are invited from the app itself at `/team`. Any signed-in partner can invite — all three are peers.
 
 ### 2. Get credentials
 
@@ -111,15 +110,52 @@ The two `PUBLIC_*` vars must be in your local `.env` at build time (they're inli
 4. **Money in paise.** The `money.ts` lib converts at UI boundaries only.
 5. **Bookings ≠ transactions.** A booking is operational; a booking generates many transactions linked via `booking_id`. Deposit amounts live on the booking row, not the ledger (see project memo).
 
-## Running a local Supabase (optional)
+## Migrations
 
-If you'd rather not touch the hosted Supabase while developing:
+Schema is managed with the **Supabase CLI**. The source of truth is the timestamped SQL files under `supabase/migrations/`.
+
+### Link the CLI (once per machine)
 
 ```sh
-npx supabase init
-npx supabase start
-npx supabase db reset --db-url <local-db-url>
-# Then point .env at the local URLs supabase start prints.
+npx supabase login                                  # opens a browser
+npx supabase link --project-ref <your-project-ref>  # prompts for DB password
 ```
 
-Requires Docker.
+### Adopt the current remote DB as a baseline (once)
+
+If the remote already has schema/data (the usual case), pull it into a baseline migration:
+
+```sh
+npx supabase db pull
+```
+
+This writes `supabase/migrations/<timestamp>_remote_schema.sql` and marks it as applied on the remote.
+
+### Make a schema change
+
+```sh
+npx supabase migration new add_something_cool
+# edit the generated file under supabase/migrations/
+npx supabase db push                                # applies pending migrations to remote
+```
+
+Every change becomes a file in git. Migration order = filename timestamp.
+
+### Regenerate TypeScript types after a migration
+
+```sh
+npx supabase gen types typescript \
+  --project-id <your-project-ref> \
+  > src/lib/database.types.ts
+```
+
+Then use `createClient<Database>(...)` for full query autocomplete. (Not wired in yet — opt-in.)
+
+### Spin up a local Postgres for development (optional)
+
+```sh
+npx supabase start         # requires Docker
+npx supabase db reset      # replays all migrations + supabase/seed.sql
+```
+
+`supabase/seed.sql` inserts the three partners and default categories on every reset.

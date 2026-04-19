@@ -1,5 +1,17 @@
 import { error, fail, redirect } from '@sveltejs/kit';
+import { supabaseAdmin } from '$lib/server/supabase-admin';
+import { snapshotTxn, writeAudit, type TxnSnapshot } from '$lib/server/txn-audit';
 import type { Actions, PageServerLoad } from './$types';
+
+type AuditRow = {
+  id: number;
+  action: 'create' | 'edit' | 'void' | 'unvoid';
+  changed_at: string;
+  changed_by: string | null;
+  before: TxnSnapshot | null;
+  after: TxnSnapshot | null;
+  note: string | null;
+};
 
 type DetailTxn = {
   id: number;
@@ -29,7 +41,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
   const id = Number(params.id);
   if (!Number.isFinite(id)) throw error(400, 'Invalid id');
 
-  const [txnRes, sharesRes, partnersRes, settleRes, receiptsRes] = await Promise.all([
+  const [txnRes, sharesRes, partnersRes, settleRes, receiptsRes, auditRes] = await Promise.all([
     locals.supabase
       .from('txn')
       .select(
@@ -45,7 +57,13 @@ export const load: PageServerLoad = async ({ locals, params }) => {
       .from('txn_receipt')
       .select('id, storage_path, mime_type, uploaded_at')
       .eq('txn_id', id)
-      .order('uploaded_at', { ascending: false })
+      .order('uploaded_at', { ascending: false }),
+    locals.supabase
+      .from('txn_audit')
+      .select('id, action, changed_at, changed_by, before, after, note')
+      .eq('txn_id', id)
+      .order('changed_at', { ascending: false })
+      .returns<AuditRow[]>()
   ]);
 
   if (txnRes.error) throw error(500, txnRes.error.message);
@@ -59,12 +77,29 @@ export const load: PageServerLoad = async ({ locals, params }) => {
     receipts.push({ ...r, signed_url: signed?.signedUrl ?? null });
   }
 
+  const auditRows = auditRes.data ?? [];
+  const userIds = Array.from(
+    new Set(auditRows.map((r) => r.changed_by).filter((v): v is string => !!v))
+  );
+  const userEmailById = new Map<string, string>();
+  if (userIds.length > 0) {
+    const { data: userList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 200 });
+    for (const u of userList?.users ?? []) {
+      if (userIds.includes(u.id)) userEmailById.set(u.id, u.email ?? u.id);
+    }
+  }
+  const audit = auditRows.map((r) => ({
+    ...r,
+    changed_by_email: r.changed_by ? userEmailById.get(r.changed_by) ?? null : null
+  }));
+
   return {
     txn: txnRes.data,
     shares: sharesRes.data ?? [],
     partners: partnersRes.data ?? [],
     settlement: settleRes.data,
-    receipts
+    receipts,
+    audit
   };
 };
 
@@ -76,21 +111,42 @@ export const actions: Actions = {
     const id = Number(params.id);
     const data = await request.formData();
     const reason = String(data.get('reason') ?? '').trim() || null;
+
+    const before = await snapshotTxn(locals.supabase, id);
     const { error: upErr } = await locals.supabase
       .from('txn')
       .update({ voided_at: new Date().toISOString(), voided_reason: reason })
       .eq('id', id);
     if (upErr) return fail(500, { message: upErr.message });
+
+    const after = await snapshotTxn(locals.supabase, id);
+    await writeAudit(locals.supabase, {
+      txnId: id,
+      action: 'void',
+      before,
+      after,
+      changedBy: locals.user?.id ?? null,
+      note: reason
+    });
     throw redirect(303, '/txn');
   },
 
   unvoid: async ({ locals, params }) => {
     const id = Number(params.id);
+    const before = await snapshotTxn(locals.supabase, id);
     const { error: upErr } = await locals.supabase
       .from('txn')
       .update({ voided_at: null, voided_reason: null })
       .eq('id', id);
     if (upErr) return fail(500, { message: upErr.message });
+    const after = await snapshotTxn(locals.supabase, id);
+    await writeAudit(locals.supabase, {
+      txnId: id,
+      action: 'unvoid',
+      before,
+      after,
+      changedBy: locals.user?.id ?? null
+    });
     return { ok: true };
   },
 
