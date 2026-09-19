@@ -22,6 +22,7 @@ Ledger app for a self-drive car rental run by three equal partners. Invite-only;
 ### 2. Get credentials
 
 **Project Settings → API:**
+
 - `Project URL` → `PUBLIC_SUPABASE_URL`
 - `anon / public` key → `PUBLIC_SUPABASE_ANON_KEY`
 - `service_role` secret → `SUPABASE_SERVICE_ROLE_KEY` (server-side only, never shipped to the browser)
@@ -159,3 +160,5 @@ npx supabase db reset      # replays all migrations + supabase/seed.sql
 ```
 
 `supabase/seed.sql` inserts the three partners and default categories on every reset.
+
+THE END
